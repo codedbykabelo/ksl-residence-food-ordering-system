@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/meal_images.dart';
 import '../models/models.dart';
 
 class DatabaseService {
@@ -15,16 +16,46 @@ class DatabaseService {
   static const String _kOrders = 'ksl_orders';
   static const String _kFeedback = 'ksl_feedback';
   static const String _kCurrentUserId = 'ksl_current_user_id';
+  static const String _defaultStaffEmail = 'ksl@gmail.com';
+  static const String _defaultStaffPassword = '123456';
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
 
-    if (prefs.getStringList(_kMeals) == null || prefs.getStringList(_kMeals)!.isEmpty) {
-      final meals = _defaultMeals();
-      await _writeMeals(meals);
+    final storedMeals = prefs.getStringList(_kMeals);
+    if (storedMeals == null || storedMeals.isEmpty) {
+      await _writeMeals(_defaultMeals());
+    } else {
+      final meals = await _readMeals();
+      final updatedMeals = meals.map((meal) {
+        final imagePath =
+            MealImages.byMealName[meal.name.trim().toLowerCase()] ??
+            (meal.image.startsWith('assets/images/')
+                ? meal.image
+                : MealImages.fallback);
+        if (meal.image == imagePath) {
+          return meal;
+        }
+
+        return Meal(
+          id: meal.id,
+          name: meal.name,
+          description: meal.description,
+          price: meal.price,
+          available: meal.available,
+          image: imagePath,
+        );
+      }).toList();
+
+      if (meals.asMap().entries.any(
+        (entry) => entry.value.image != updatedMeals[entry.key].image,
+      )) {
+        await _writeMeals(updatedMeals);
+      }
     }
 
-    if (prefs.getStringList(_kUsers) == null || prefs.getStringList(_kUsers)!.isEmpty) {
+    if (prefs.getStringList(_kUsers) == null ||
+        prefs.getStringList(_kUsers)!.isEmpty) {
       final staff = AppUser(
         studentNumber: '',
         fullName: 'Residence Manager',
@@ -34,6 +65,50 @@ class DatabaseService {
       );
       await prefs.setStringList(_kUsers, [jsonEncode(staff.toMap())]);
     }
+
+    await _ensureDefaultStaffAccount();
+  }
+
+  Future<void> _ensureDefaultStaffAccount() async {
+    final users = await _readUsers();
+    final staffIndex = users.indexWhere(
+      (user) =>
+          user.role == 'staff' &&
+          user.email.trim().toLowerCase() == _defaultStaffEmail,
+    );
+    if (staffIndex == -1) {
+      final nextId =
+          users
+              .map((user) => user.id ?? 0)
+              .fold(0, (max, id) => id > max ? id : max) +
+          1;
+      users.add(
+        AppUser(
+          id: nextId,
+          studentNumber: '',
+          fullName: 'Residence Manager',
+          email: _defaultStaffEmail,
+          passwordHash: hashPassword(_defaultStaffPassword),
+          role: 'staff',
+        ),
+      );
+      await _writeUsers(users);
+      return;
+    }
+
+    final staff = users[staffIndex];
+    final passwordHash = hashPassword(_defaultStaffPassword);
+    if (staff.passwordHash != passwordHash) {
+      users[staffIndex] = AppUser(
+        id: staff.id,
+        studentNumber: staff.studentNumber,
+        fullName: staff.fullName,
+        email: staff.email,
+        passwordHash: passwordHash,
+        role: staff.role,
+      );
+      await _writeUsers(users);
+    }
   }
 
   Future<List<AppUser>> _readUsers() async {
@@ -41,7 +116,11 @@ class DatabaseService {
     final items = prefs.getStringList(_kUsers) ?? const <String>[];
 
     return items
-        .map((item) => AppUser.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)))
+        .map(
+          (item) => AppUser.fromMap(
+            Map<String, dynamic>.from(jsonDecode(item) as Map),
+          ),
+        )
         .toList();
   }
 
@@ -58,7 +137,10 @@ class DatabaseService {
     final items = prefs.getStringList(_kMeals) ?? const <String>[];
 
     return items
-        .map((item) => Meal.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)))
+        .map(
+          (item) =>
+              Meal.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)),
+        )
         .toList();
   }
 
@@ -75,7 +157,10 @@ class DatabaseService {
     final items = prefs.getStringList(_kOrders) ?? const <String>[];
 
     return items
-        .map((item) => Order.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)))
+        .map(
+          (item) =>
+              Order.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)),
+        )
         .toList();
   }
 
@@ -92,7 +177,11 @@ class DatabaseService {
     final items = prefs.getStringList(_kFeedback) ?? const <String>[];
 
     return items
-        .map((item) => Feedback.fromMap(Map<String, dynamic>.from(jsonDecode(item) as Map)))
+        .map(
+          (item) => Feedback.fromMap(
+            Map<String, dynamic>.from(jsonDecode(item) as Map),
+          ),
+        )
         .toList();
   }
 
@@ -161,7 +250,11 @@ class DatabaseService {
       }
     }
 
-    final nextId = (users.map((user) => user.id ?? 0).fold(0, (max, value) => value > max ? value : max)) + 1;
+    final nextId =
+        (users
+            .map((user) => user.id ?? 0)
+            .fold(0, (max, value) => value > max ? value : max)) +
+        1;
     final user = AppUser(
       id: nextId,
       studentNumber: normalizedNumber,
@@ -181,7 +274,8 @@ class DatabaseService {
     final normalizedEmail = email.trim().toLowerCase();
 
     for (final user in users) {
-      if (user.role == 'student' && user.email.trim().toLowerCase() == normalizedEmail) {
+      if (user.role == 'student' &&
+          user.email.trim().toLowerCase() == normalizedEmail) {
         if (user.passwordHash == hashPassword(password)) {
           return user;
         }
@@ -196,7 +290,8 @@ class DatabaseService {
     final normalizedEmail = email.trim().toLowerCase();
 
     for (final user in users) {
-      if (user.role == 'staff' && user.email.trim().toLowerCase() == normalizedEmail) {
+      if (user.role == 'staff' &&
+          user.email.trim().toLowerCase() == normalizedEmail) {
         if (user.passwordHash == hashPassword(password)) {
           return user;
         }
@@ -221,8 +316,15 @@ class DatabaseService {
 
     final orders = await _readOrders();
     final orderNumber = await generateOrderNumber();
-    final total = items.fold(0.0, (sum, item) => sum + (item.unitPrice * item.quantity));
-    final id = (orders.map((order) => order.id ?? 0).fold(0, (max, value) => value > max ? value : max)) + 1;
+    final total = items.fold(
+      0.0,
+      (sum, item) => sum + (item.unitPrice * item.quantity),
+    );
+    final id =
+        (orders
+            .map((order) => order.id ?? 0)
+            .fold(0, (max, value) => value > max ? value : max)) +
+        1;
 
     final order = Order(
       id: id,
@@ -292,7 +394,9 @@ class DatabaseService {
     required String comment,
   }) async {
     final feedbacks = await _readFeedback();
-    final exists = feedbacks.any((entry) => entry.orderId == orderId && entry.userId == userId);
+    final exists = feedbacks.any(
+      (entry) => entry.orderId == orderId && entry.userId == userId,
+    );
     if (exists) {
       throw Exception('Feedback for this order has already been submitted.');
     }
@@ -333,66 +437,67 @@ class DatabaseService {
     return [
       Meal(
         name: 'Chicken Burger',
-        description: 'Grilled chicken patty with lettuce, tomato and house sauce.',
+        description:
+            'Grilled chicken patty with lettuce, tomato and house sauce.',
         price: 52.0,
         available: true,
-        image: '🍔',
+        image: MealImages.forMealName('Chicken Burger'),
       ),
       Meal(
         name: 'Chicken and Chips',
         description: 'Golden fries with crispy chicken and a spicy dip.',
         price: 68.0,
         available: true,
-        image: '🍟',
+        image: MealImages.forMealName('Chicken and Chips'),
       ),
       Meal(
         name: 'Beef Burger',
         description: 'Juicy beef burger with melted cheese and relish.',
         price: 58.0,
         available: true,
-        image: '🍔',
+        image: MealImages.forMealName('Beef Burger'),
       ),
       Meal(
         name: 'Pizza',
         description: 'Classic cheese pizza with tomato and herb seasoning.',
         price: 72.0,
         available: true,
-        image: '🍕',
+        image: MealImages.forMealName('Pizza'),
       ),
       Meal(
         name: 'Sandwich',
         description: 'Fresh sandwich with chicken, salad and aioli.',
         price: 45.0,
         available: true,
-        image: '🥪',
+        image: MealImages.forMealName('Sandwich'),
       ),
       Meal(
         name: 'Pasta',
         description: 'Creamy pasta tossed with herbs and roasted vegetables.',
         price: 64.0,
         available: true,
-        image: '🍝',
+        image: MealImages.forMealName('Pasta'),
       ),
       Meal(
         name: 'Rice and Chicken',
         description: 'Comforting rice and chicken with peri-peri seasoning.',
         price: 70.0,
         available: true,
-        image: '🍛',
+        image: MealImages.forMealName('Rice and Chicken'),
       ),
       Meal(
         name: 'Breakfast Meal',
         description: 'Eggs, toast, grilled tomato and a fruit cup.',
         price: 48.0,
         available: true,
-        image: '🍳',
+        image: MealImages.forMealName('Breakfast Meal'),
       ),
       Meal(
         name: 'Vegetarian Meal',
         description: 'Savoury vegetarian bowl with beans, rice and greens.',
         price: 56.0,
         available: true,
-        image: '🥗',
+        image: MealImages.forMealName('Vegetarian Meal'),
       ),
     ];
   }

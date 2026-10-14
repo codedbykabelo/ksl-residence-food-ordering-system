@@ -1,3 +1,5 @@
+import 'meal_images.dart';
+
 class AppUser {
   final int? id;
   final String studentNumber;
@@ -86,7 +88,7 @@ class Meal {
       description: map['description'] ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
       available: isAvailable,
-      image: map['image'] ?? '🍽️',
+      image: map['image'] ?? MealImages.fallback,
     );
   }
 }
@@ -244,7 +246,12 @@ class Feedback {
 }
 
 class OrderStatusHelper {
-  static const List<String> steps = ['Pending', 'Preparing', 'Ready', 'Collected'];
+  static const List<String> steps = [
+    'Pending',
+    'Preparing',
+    'Ready',
+    'Collected',
+  ];
 
   static int indexOf(String status) {
     final normalized = status.trim();

@@ -5,6 +5,16 @@ import '../providers/app_state.dart';
 import 'staff_screens.dart';
 import 'student_screens.dart';
 
+String? staffRouteFromUri(Uri uri) {
+  for (final route in [uri.path, uri.fragment]) {
+    final normalized = route.toLowerCase().replaceFirst(RegExp(r'/+$'), '');
+    if (normalized == '/staff' || normalized == '/staff-login') {
+      return normalized;
+    }
+  }
+  return null;
+}
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -20,9 +30,8 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
 
       final appState = context.read<AppState>();
-      final path = Uri.base.path.toLowerCase();
 
-      if (path == '/staff' || path == '/staff-login') {
+      if (staffRouteFromUri(Uri.base) != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const StaffLoginScreen()),
         );
@@ -31,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (appState.currentUser == null) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          MaterialPageRoute(builder: (_) => const StudentHomeScreen()),
         );
         return;
       }
@@ -62,7 +71,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
               ),
-              child: const Icon(Icons.restaurant_menu_rounded, size: 72, color: Color(0xFF0E7C5C)),
+              child: const Icon(
+                Icons.restaurant_menu_rounded,
+                size: 72,
+                color: Color(0xFF0E7C5C),
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -95,7 +108,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F3),
+      backgroundColor: const Color(0xFFF7F8F5),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -112,7 +125,11 @@ class WelcomeScreen extends StatelessWidget {
                       color: const Color(0xFF0E7C5C),
                       borderRadius: BorderRadius.circular(28),
                     ),
-                    child: const Icon(Icons.restaurant_rounded, size: 48, color: Colors.white),
+                    child: const Icon(
+                      Icons.restaurant_rounded,
+                      size: 48,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -136,15 +153,23 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'Welcome to KSL Residence Food Ordering.',
+                    'Good food, right around the corner.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF173D34)),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF173D34),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Order your meals quickly and conveniently from the residence cafeteria.',
+                    'Browse the residence menu and find your next favourite.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.5),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
@@ -152,11 +177,13 @@ class WelcomeScreen extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const StudentLoginScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const StudentLoginScreen(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.login_rounded),
-                      label: const Text('Student Login'),
+                      label: const Text('Student sign in'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: const Color(0xFF0E7C5C),
@@ -173,18 +200,23 @@ class WelcomeScreen extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const StudentRegistrationScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const StudentRegistrationScreen(),
+                          ),
                         );
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(52),
                         foregroundColor: const Color(0xFF0E7C5C),
-                        side: const BorderSide(color: Color(0xFF0E7C5C), width: 1.4),
+                        side: const BorderSide(
+                          color: Color(0xFF0E7C5C),
+                          width: 1.4,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text('Create Student Account'),
+                      child: const Text('Create student account'),
                     ),
                   ),
                 ],
@@ -193,6 +225,29 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class StaffDashboardRoute extends StatelessWidget {
+  const StaffDashboardRoute({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppState>(
+      builder: (context, appState, _) {
+        if (appState.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (appState.currentUser?.role == 'staff') {
+          return const StaffDashboardScreen();
+        }
+
+        return const StaffLoginScreen();
+      },
     );
   }
 }
@@ -249,7 +304,11 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                   children: [
                     const Text(
                       'Welcome back',
-                      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Color(0xFF123B2F)),
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF123B2F),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -261,8 +320,11 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your email.';
-                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+').hasMatch(value.trim())) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email.';
+                        }
+                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+')
+                            .hasMatch(value.trim())) {
                           return 'Please enter a valid email address.';
                         }
                         return null;
@@ -278,7 +340,9 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your password.';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your password.';
+                        }
                         return null;
                       },
                       decoration: const InputDecoration(
@@ -294,13 +358,18 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: const Color(0xFF0E7C5C),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: _loading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text('LOGIN'),
                     ),
@@ -308,7 +377,9 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                     TextButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const StudentRegistrationScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const StudentRegistrationScreen(),
+                          ),
                         );
                       },
                       child: const Text('Don\'t have an account? Create one'),
@@ -328,7 +399,8 @@ class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key});
 
   @override
-  State<StudentRegistrationScreen> createState() => _StudentRegistrationScreenState();
+  State<StudentRegistrationScreen> createState() =>
+      _StudentRegistrationScreenState();
 }
 
 class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
@@ -353,7 +425,9 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your student account has been created successfully.')),
+        const SnackBar(
+          content: Text('Your student account has been created successfully.'),
+        ),
       );
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const StudentLoginScreen()),
@@ -384,13 +458,20 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                   children: [
                     const Text(
                       'Register',
-                      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Color(0xFF173D34)),
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF173D34),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _fullNameController,
                       textCapitalization: TextCapitalization.words,
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Please enter your full name.' : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Please enter your full name.'
+                          : null,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person_outline),
@@ -400,7 +481,10 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _studentNumberController,
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Please enter your student number.' : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Please enter your student number.'
+                          : null,
                       decoration: const InputDecoration(
                         labelText: 'Student Number',
                         prefixIcon: Icon(Icons.badge_outlined),
@@ -412,8 +496,11 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your email.';
-                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+').hasMatch(value.trim())) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email.';
+                        }
+                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+')
+                            .hasMatch(value.trim())) {
                           return 'Please enter a valid email address.';
                         }
                         return null;
@@ -429,8 +516,12 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your password.';
-                        if (value.trim().length < 6) return 'Password must be at least 6 characters long.';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your password.';
+                        }
+                        if (value.trim().length < 6) {
+                          return 'Password must be at least 6 characters long.';
+                        }
                         return null;
                       },
                       decoration: const InputDecoration(
@@ -444,8 +535,12 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       controller: _confirmPasswordController,
                       obscureText: true,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please confirm your password.';
-                        if (value.trim() != _passwordController.text.trim()) return 'Passwords do not match.';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please confirm your password.';
+                        }
+                        if (value.trim() != _passwordController.text.trim()) {
+                          return 'Passwords do not match.';
+                        }
                         return null;
                       },
                       decoration: const InputDecoration(
@@ -461,13 +556,18 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: const Color(0xFF0E7C5C),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: _loading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text('CREATE ACCOUNT'),
                     ),
@@ -534,15 +634,22 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                   children: [
                     const Text(
                       'Restricted Staff Portals',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFF173D34)),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF173D34),
+                      ),
                     ),
                     const SizedBox(height: 28),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your email.';
-                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+').hasMatch(value.trim())) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email.';
+                        }
+                        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+')
+                            .hasMatch(value.trim())) {
                           return 'Please enter a valid email.';
                         }
                         return null;
@@ -558,7 +665,9 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Please enter your password.';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your password.';
+                        }
                         return null;
                       },
                       decoration: const InputDecoration(
@@ -574,13 +683,18 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: Colors.orange.shade700,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: _loading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text('LOGIN AS STAFF'),
                     ),

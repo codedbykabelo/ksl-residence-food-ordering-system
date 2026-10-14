@@ -60,6 +60,19 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/images/residence_favourite_1.png
+    - assets/images/residence_favourite_2.png
+    - assets/images/residence_favourite_3.png
+    - assets/images/food/chicken-burger.webp
+    - assets/images/food/chicken-and-chips.webp
+    - assets/images/food/beef-burger.webp
+    - assets/images/food/pizza.webp
+    - assets/images/food/sandwich.webp
+    - assets/images/food/pasta.webp
+    - assets/images/food/rice-and-chicken.webp
+    - assets/images/food/breakfast-meal.webp
+    - assets/images/food/vegetarian-meal.webp
 
   # To add assets to your application, add an assets section, like this:
   # assets:

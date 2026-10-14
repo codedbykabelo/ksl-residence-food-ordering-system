@@ -13,32 +13,36 @@ class AppState extends ChangeNotifier {
   List<Order> allOrders = [];
   List<Feedback> feedback = [];
   bool isLoading = false;
+  String? initializationError;
 
   Future<void> initialize() async {
     isLoading = true;
+    initializationError = null;
     notifyListeners();
 
-    await _databaseService.initialize();
-    currentUser = await _databaseService.getCurrentUser();
-    await refreshMeals();
+    try {
+      await _databaseService.initialize();
+      currentUser = await _databaseService.getCurrentUser();
+      await refreshMeals();
 
-    if (currentUser != null) {
-      if (currentUser!.role == 'student') {
-        await refreshOrders();
-      } else if (currentUser!.role == 'staff') {
-        await refreshAllOrders();
-        await refreshFeedback();
+      if (currentUser != null) {
+        if (currentUser!.role == 'student') {
+          await refreshOrders();
+        } else if (currentUser!.role == 'staff') {
+          await refreshAllOrders();
+          await refreshFeedback();
+        }
       }
+    } on Exception catch (error) {
+      initializationError = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
-  double get cartTotal => cart.fold(
-        0.0,
-        (sum, item) => sum + (item.unitPrice * item.quantity),
-      );
+  double get cartTotal =>
+      cart.fold(0.0, (sum, item) => sum + (item.unitPrice * item.quantity));
 
   int get cartItemCount => cart.fold(0, (sum, item) => sum + item.quantity);
 
@@ -55,16 +59,20 @@ class AppState extends ChangeNotifier {
       throw ArgumentError('This meal is currently unavailable.');
     }
 
-    final existing = cart.where((item) => item.mealId == (meal.id ?? 0)).toList();
+    final existing = cart
+        .where((item) => item.mealId == (meal.id ?? 0))
+        .toList();
     if (existing.isNotEmpty) {
       existing.first.quantity += quantity;
     } else {
-      cart.add(CartItem(
-        mealId: meal.id ?? 0,
-        mealName: meal.name,
-        unitPrice: meal.price,
-        quantity: quantity,
-      ));
+      cart.add(
+        CartItem(
+          mealId: meal.id ?? 0,
+          mealName: meal.name,
+          unitPrice: meal.price,
+          quantity: quantity,
+        ),
+      );
     }
     notifyListeners();
   }
@@ -192,7 +200,11 @@ class AppState extends ChangeNotifier {
     return order;
   }
 
-  Future<void> updateOrderStatus(int orderId, String currentStatus, String nextStatus) async {
+  Future<void> updateOrderStatus(
+    int orderId,
+    String currentStatus,
+    String nextStatus,
+  ) async {
     if (!OrderStatusHelper.canAdvance(currentStatus, nextStatus)) {
       throw Exception('This status change is not allowed.');
     }
@@ -214,7 +226,9 @@ class AppState extends ChangeNotifier {
       throw Exception('Rating must be between 1 and 5 stars.');
     }
 
-    final existing = feedback.any((entry) => entry.orderId == orderId && entry.userId == currentUser!.id);
+    final existing = feedback.any(
+      (entry) => entry.orderId == orderId && entry.userId == currentUser!.id,
+    );
     if (existing) {
       throw Exception('Feedback has already been submitted for this order.');
     }
@@ -233,7 +247,9 @@ class AppState extends ChangeNotifier {
     if (currentUser == null) {
       return false;
     }
-    return feedback.any((entry) => entry.orderId == orderId && entry.userId == currentUser!.id);
+    return feedback.any(
+      (entry) => entry.orderId == orderId && entry.userId == currentUser!.id,
+    );
   }
 
   bool canRateOrder(Order order) {
